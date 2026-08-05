@@ -72,12 +72,12 @@
   {.msg = {{MSG_SUBARU_Brake_Status,    alt_bus,         8, 50U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},  \
   {.msg = {{MSG_SUBARU_CruiseControl,   alt_bus,         8, 20U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},  \
 
-#define SUBARU_LKAS_ANGLE_RX_CHECKS(alt_bus)                                                                                                    \
+#define SUBARU_LKAS_ANGLE_RX_CHECKS(alt_bus, cruise_msg, cruise_bus, cruise_frequency)                                                                                                    \
   {.msg = {{MSG_SUBARU_Throttle,        SUBARU_MAIN_BUS, 8, 100U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}}, \
   {.msg = {{MSG_SUBARU_Steering_Torque, SUBARU_MAIN_BUS, 8, 50U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},  \
   {.msg = {{MSG_SUBARU_Wheel_Speeds,    alt_bus,         8, 50U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},  \
   {.msg = {{MSG_SUBARU_Brake_Status,    alt_bus,         8, 50U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},  \
-  {.msg = {{MSG_SUBARU_ES_Status,       alt_bus,         8, 20U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},  \
+  {.msg = {{cruise_msg,                cruise_bus,      8, cruise_frequency, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},  \
   {.msg = {{MSG_SUBARU_Steering_2,      SUBARU_MAIN_BUS, 8, 50U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},  \
 
 static bool subaru_gen2 = false;
@@ -119,9 +119,14 @@ static void subaru_rx_hook(const CANPacket_t *msg) {
   }
 
   // enter controls on rising edge of ACC, exit controls on ACC off
-  if (subaru_lkas_angle && (msg->addr == MSG_SUBARU_ES_Status) && (msg->bus == alt_main_bus)) {
-    bool cruise_engaged = (msg->data[3] >> 5) & 1U;
-    pcm_cruise_check(cruise_engaged);
+  if (subaru_lkas_angle) {
+    if (subaru_gen2 && (msg->addr == MSG_SUBARU_ES_Status) && (msg->bus == SUBARU_ALT_BUS)) {
+      bool cruise_engaged = (msg->data[3] >> 5) & 1U;
+      pcm_cruise_check(cruise_engaged);
+    } else if (!subaru_gen2 && (msg->addr == MSG_SUBARU_ES_Brake) && (msg->bus == SUBARU_CAM_BUS)) {
+      bool cruise_engaged = (msg->data[4] >> 7) & 1U;
+      pcm_cruise_check(cruise_engaged);
+    }
   }
   if (!subaru_lkas_angle && (msg->addr == MSG_SUBARU_CruiseControl) && (msg->bus == alt_main_bus)) {
     bool cruise_engaged = (msg->data[5] >> 1) & 1U;
@@ -283,11 +288,11 @@ static safety_config subaru_init(uint16_t param) {
   };
 
   static RxCheck subaru_lkas_angle_rx_checks[] = {
-    SUBARU_LKAS_ANGLE_RX_CHECKS(SUBARU_MAIN_BUS)
+    SUBARU_LKAS_ANGLE_RX_CHECKS(SUBARU_MAIN_BUS, MSG_SUBARU_ES_Brake, SUBARU_CAM_BUS, 50U)
   };
 
   static RxCheck subaru_lkas_angle_gen2_rx_checks[] = {
-    SUBARU_LKAS_ANGLE_RX_CHECKS(SUBARU_ALT_BUS)
+    SUBARU_LKAS_ANGLE_RX_CHECKS(SUBARU_ALT_BUS, MSG_SUBARU_ES_Status, SUBARU_ALT_BUS, 20U)
   };
 
   const uint16_t SUBARU_PARAM_GEN2 = 1;

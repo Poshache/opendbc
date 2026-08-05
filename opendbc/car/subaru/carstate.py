@@ -84,10 +84,13 @@ class CarState(CarStateBase):
     cp_es_brake = cp_alt if self.CP.flags & SubaruFlags.GLOBAL_GEN2 else cp_cam
 
     if self.CP.flags & SubaruFlags.LKAS_ANGLE:
-      # ES_Brake->Cruise_Activated stays high on brake at standstill,
-      # so we use ES_Status->Cruise_Activated which is the correct engaged state.
-      ret.cruiseState.enabled = cp_es_brake.vl["ES_Status"]['Cruise_Activated'] != 0
-      ret.cruiseState.available = cp_cam.vl["ES_DashStatus"]['Cruise_On'] != 0
+      if self.CP.flags & SubaruFlags.GLOBAL_GEN2:
+        # ES_Brake->Cruise_Activated stays high on brake at standstill on newer Gen2 cars.
+        ret.cruiseState.enabled = cp_es_brake.vl["ES_Status"]["Cruise_Activated"] != 0
+      else:
+        # Gen1 Forester uses ES_Brake from the camera bus.
+        ret.cruiseState.enabled = cp_es_brake.vl["ES_Brake"]["Cruise_Activated"] != 0
+      ret.cruiseState.available = cp_cam.vl["ES_DashStatus"]["Cruise_On"] != 0
     elif self.CP.flags & SubaruFlags.HYBRID:
       # ES_Status is missing on hybrid, so we use ES_Brake instead
       # TODO: 0x27 and 0x225 on hybrids may work as a replacement
