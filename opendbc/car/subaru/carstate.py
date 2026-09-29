@@ -85,11 +85,11 @@ class CarState(CarStateBase):
 
     if self.CP.flags & (SubaruFlags.HYBRID | SubaruFlags.LKAS_ANGLE):
       # ES_DashStatus->Cruise_Activated_Dash falls during gas override and at standstill.
-      # On Crosstrek 2025, ES_Brake stays high after braking at a stop while ES_Status falls.
-      # Hybrids retain ES_Brake because ES_Status is missing.
+      # Gen2 angle platforms use ES_Status because ES_Brake can stay high after braking at a stop.
+      # Gen1 angle Forester and hybrids retain ES_Brake because ES_Status is missing.
       # TODO: Validate hybrid cruise state. ES_Status/ES_DashStatus->Signal7 are missing or always zero.
       #  0x27 and 0x225 may be alternatives.
-      cruise_msg = "ES_Status" if self.CP.flags & SubaruFlags.LKAS_ANGLE else "ES_Brake"
+      cruise_msg = "ES_Status" if (self.CP.flags & SubaruFlags.GLOBAL_GEN2 and self.CP.flags & SubaruFlags.LKAS_ANGLE) else "ES_Brake"
       ret.cruiseState.enabled = cp_es_brake.vl[cruise_msg]['Cruise_Activated'] != 0
       ret.cruiseState.available = cp_cam.vl["ES_DashStatus"]['Cruise_On'] != 0
     else:
