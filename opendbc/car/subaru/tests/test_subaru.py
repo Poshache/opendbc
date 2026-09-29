@@ -66,7 +66,7 @@ class TestSubaruAngleLimits(unittest.TestCase):
           self.assertLessEqual(worst, MAX_LATERAL_ACCEL + 1e-3)
 
 class TestSubaruCruiseState(unittest.TestCase):
-  def test_angle_cruise_uses_es_status(self):
+  def test_angle_cruise_uses_platform_message(self):
     for platform in CAR:
       if not platform.config.flags & SubaruFlags.LKAS_ANGLE:
         continue
@@ -80,4 +80,5 @@ class TestSubaruCruiseState(unittest.TestCase):
           brake_parser.vl["Brake_Status"]["Brake"] = brake_pressed
           cruise_parser.vl["ES_Status"]["Cruise_Activated"] = status
           cruise_parser.vl["ES_Brake"]["Cruise_Activated"] = brake_status
-          self.assertEqual(cs.update(parsers).cruiseState.enabled, status)
+          expected = status if cp.flags & SubaruFlags.GLOBAL_GEN2 else brake_status
+          self.assertEqual(cs.update(parsers).cruiseState.enabled, expected)
