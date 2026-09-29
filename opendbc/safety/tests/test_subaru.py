@@ -253,6 +253,10 @@ class TestSubaruAngleSafetyBase(TestSubaruSafetyBase, common.AngleSteeringSafety
 
 
 class TestSubaruGen1AngleStockLongitudinalSafety(TestSubaruStockLongitudinalSafetyBase, TestSubaruAngleSafetyBase):
+  def _pcm_status_msg(self, enable):
+    values = {"Cruise_Activated": enable}
+    return self.packer.make_can_msg_safety("ES_Brake", self.ALT_CAM_BUS, values)
+
   FLAGS = SubaruSafetyFlags.LKAS_ANGLE
   TX_MSGS = lkas_tx_msgs(SUBARU_MAIN_BUS, SubaruMsg.ES_LKAS_ANGLE)
   RELAY_MALFUNCTION_ADDRS = {SUBARU_MAIN_BUS: (SubaruMsg.ES_LKAS_ANGLE, SubaruMsg.ES_DashStatus, SubaruMsg.ES_LKAS_State,
